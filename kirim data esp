@@ -1,0 +1,87 @@
+#ifdef __cplusplus
+  extern "C" {
+ #endif
+
+  uint8_t temprature_sens_read();
+
+#ifdef __cplusplus
+}
+#endif
+
+#include <WiFi.h>
+#include "ThingSpeak.h"
+
+WiFiClient  client;
+
+const char* ssid = "xxx";   // nama wifi 
+const char* password = "xxx"; // password wifi
+
+const char * WRITE_API = "S8JLFH64J0AGBMLV";
+const long CHANNEL = 1282742;
+
+unsigned long lastTime = 0;
+unsigned long timerDelay = 10000;
+
+int sensor_tegangan = A0;
+int lm35 = A3;
+ 
+float ADC = 0.0; 
+float hasil = 0.0;
+float R1 = 30000.0; //resistor 30k
+float R2 = 7500.0; //resistor 7k5
+int baca_tegangan = 0;
+int nilai_LM35;
+int baca_LM35;
+
+uint8_t temprature_sens_read();
+float rumus_suhu;
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(sensor_tegangan, INPUT);
+  pinMode(lm35, INPUT);
+
+  WiFi.mode(WIFI_STA);   
+  
+  ThingSpeak.begin(client);
+}
+void loop() {
+  if ((millis() - lastTime) > timerDelay) {
+    
+    // Connect or reconnect to WiFi
+    if(WiFi.status() != WL_CONNECTED){
+      Serial.print("Attempting to connect");
+      while(WiFi.status() != WL_CONNECTED){
+        WiFi.begin(ssid, password); 
+        delay(5000);     
+      } 
+      Serial.println("\nConnected.");
+    }
+
+    //baca suhu internal esp
+    rumus_suhu = (temprature_sens_read() - 32) / 1.8;
+
+    //baca tegangan sumber
+    baca_tegangan = analogRead(sensor_tegangan);
+    ADC = (baca_tegangan * 5.0) / 1024.0;
+    hasil = ADC / (R2/(R1+R2));
+
+    //baca sensor lm35
+    baca_LM35 = analogRead(lm35);
+    nilai_LM35 = baca_LM35*0.488;
+    
+    //ThingSpeak.setField(1, rumus_suhu);
+    ThingSpeak.setField(1, hasil);
+    ThingSpeak.setField(2, nilai_LM35);
+    
+    int x = ThingSpeak.writeFields(CHANNEL, WRITE_API);
+
+    if(x == 200){
+      Serial.println("Channel update successful.");
+    }
+    else{
+      Serial.println("Problem updating channel. HTTP error code " + String(x));
+    }
+    lastTime = millis();
+  }
+}
