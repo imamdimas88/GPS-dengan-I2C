@@ -1,0 +1,34 @@
+#define TINY_GSM_MODEM_SIM7000
+
+#define SerialMon Serial
+
+//menggunakan arduino mega karena ada banyak pin serial
+#define SerialAT Serial1
+
+//jika menggunakan arduino yang tidak memiliki banyak pin serial menggunakan software serial
+//#include <SoftwareSerial.h>
+//SoftwareSerial SerialAT(2, 3); // RX, TX
+
+
+#include <TinyGsmClient.h>
+
+void setup() {
+  // Set console baud rate
+  SerialMon.begin(9600);
+  delay(6000);
+  SerialAT.begin(19200); // baud rate menyesuaikan modul jadi bisa dicoba coba sampai modul merespon ketika diberi perintah "AT"
+  delay(4000);
+}
+
+void loop() {
+
+  while(true) {
+    if (SerialAT.available()) {
+      SerialMon.write(SerialAT.read());
+    }
+    if (SerialMon.available()) {
+      SerialAT.write(SerialMon.read());
+    }
+    delay(0);
+  }
+}
